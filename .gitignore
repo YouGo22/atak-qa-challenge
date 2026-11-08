@@ -1,0 +1,17 @@
+node_modules/
+playwright-report/
+test-results/
+blob-report/
+.npm-cache/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+
+# Arquivo auxiliar e históricos preservados somente localmente
+/prompts.odt
+/evidencias/*
+!/evidencias/execucao-49-testes-41-aprovados-8-reprovados/
+/evidencias/execucao-49-testes-41-aprovados-8-reprovados/*
+!/evidencias/execucao-49-testes-41-aprovados-8-reprovados/BUG-*.png

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal de Pedidos – Ambiente de Teste QA</title>
+<style>
+  :root{
+    --bg:#F3F5F8; --surface:#FFFFFF; --ink:#1E2833; --muted:#5B6776; --line:#D5DBE3;
+    --accent:#0E6E6A; --accent-ink:#FFFFFF; --accent-soft:#E2F1F0;
+    --danger:#B42318; --danger-bg:#FDECEA; --ok:#13703A; --ok-bg:#E6F4EA;
+    --warn:#8A5A00; --warn-bg:#FFF4DB;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#131A21; --surface:#1B242D; --ink:#E6EBF0; --muted:#9AA6B3; --line:#2F3B47;
+      --accent:#3FB8B0; --accent-ink:#0B1F1E; --accent-soft:#18332F;
+      --danger:#F2867B; --danger-bg:#3A1D1A; --ok:#6FD394; --ok-bg:#163322;
+      --warn:#F0C267; --warn-bg:#3A2E12;
+      color-scheme:dark;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif}
+  button,input,select{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none !important}
+
+  header.topo{display:flex;align-items:center;gap:16px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .marca{font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .ambiente{font-size:12px;padding:2px 8px;border-radius:4px;background:var(--warn-bg);color:var(--warn)}
+  .topo .direita{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .contador{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+  .contador b{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--accent);color:var(--accent-ink);display:inline-grid;place-items:center;font-size:12px}
+
+  main{max-width:1160px;margin:0 auto;padding:24px}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:17px;margin:0 0 12px}
+  .sub{color:var(--muted);margin:0 0 20px}
+
+  .btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:6px;cursor:pointer}
+  .btn:hover:not(:disabled){border-color:var(--accent)}
+  .btn-primario{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-icone{width:32px;height:32px;padding:0;display:inline-grid;place-items:center}
+  .link{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-decoration:underline}
+
+  label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+  .campo{margin-bottom:14px}
+  input[type=text],input[type=email],input[type=password],input[type=search],select{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+  input[aria-invalid=true]{border-color:var(--danger)}
+  .erro-campo{color:var(--danger);font-size:13px;margin-top:4px}
+  .alerta{padding:10px 12px;border-radius:6px;font-size:14px;margin-bottom:14px}
+  .alerta-erro{background:var(--danger-bg);color:var(--danger)}
+  .alerta-ok{background:var(--ok-bg);color:var(--ok)}
+
+  /* Login */
+  .login{max-width:400px;margin:48px auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px}
+  .login .dica{font-size:13px;color:var(--muted);margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+
+  /* App */
+  .grade{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+  @media (max-width:880px){.grade{grid-template-columns:1fr}}
+  .filtros{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:12px}
+  @media (max-width:600px){.filtros{grid-template-columns:1fr}}
+  .resumo-lista{font-size:14px;color:var(--muted);margin-bottom:10px}
+  .produtos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .produto{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .produto .cat{font-size:12px;color:var(--muted)}
+  .produto .nome{font-weight:600}
+  .produto .preco{font-size:18px;font-weight:700}
+  .produto .estoque{font-size:13px;color:var(--muted)}
+  .produto .estoque.zerado{color:var(--danger)}
+  .produto .btn{margin-top:auto}
+  .carregando,.vazio{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:32px;text-align:center;color:var(--muted)}
+  .spinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 10px;animation:gira 0.8s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+  .pedido{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;position:sticky;top:16px}
+  .itens{list-style:none;margin:0 0 12px;padding:0}
+  .item{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .item .qtd{display:flex;align-items:center;gap:6px}
+  .item .qtd span{min-width:24px;text-align:center;font-weight:600}
+  .item .linha-total{text-align:right;font-weight:600}
+  .totais{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 14px}
+  .totais td{padding:4px 0}
+  .totais td:last-child{text-align:right}
+  .totais tr.total td{font-size:17px;font-weight:700;border-top:1px solid var(--line);padding-top:8px}
+  .cupom{display:flex;gap:8px;margin-top:8px}
+  .cupom-aplicado{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);padding:6px 10px;border-radius:6px;font-size:14px;margin-top:8px}
+
+  details.regras{margin-top:28px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px}
+  details.regras summary{cursor:pointer;font-weight:600}
+  details.regras ol{padding-left:0;list-style:none;margin:12px 0 0}
+  details.regras li{padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+  details.regras code{font-weight:600}
+
+  /* Modal */
+  .fundo-modal{position:fixed;inset:0;background:rgba(10,15,20,.55);display:grid;place-items:center;padding:16px;z-index:20}
+  .modal{background:var(--surface);border-radius:10px;width:100%;max-width:480px;max-height:90vh;overflow:auto;padding:22px;border:1px solid var(--line)}
+  .modal-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .modal-cab h2{margin:0}
+  fieldset{border:0;padding:0;margin:0 0 14px}
+  legend{font-size:14px;font-weight:600;margin-bottom:6px;padding:0}
+  .opcoes{display:flex;gap:16px;flex-wrap:wrap}
+  .opcoes label,.aceite label{display:flex;align-items:center;gap:6px;font-weight:400;margin:0}
+  .acoes{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+  .sucesso{text-align:center;padding:12px 0}
+  .sucesso .numero{font-size:24px;font-weight:700;margin:6px 0 16px}
+
+  /* Toasts */
+  .toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:30}
+  .toast{padding:10px 14px;border-radius:6px;font-size:14px;border:1px solid var(--line);background:var(--surface);min-width:240px}
+  .toast.ok{border-left:4px solid var(--ok)}
+  .toast.erro{border-left:4px solid var(--danger)}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <span class="marca">Portal de Pedidos</span>
+  <span class="ambiente" data-testid="tag-ambiente">Ambiente de testes</span>
+  <div class="direita" id="area-usuario" hidden>
+    <span data-testid="usuario-nome" id="usuario-nome"></span>
+    <span class="contador">Itens no pedido <b data-testid="carrinho-contador" id="carrinho-contador">0</b></span>
+    <button class="btn" id="btn-sair" data-testid="btn-sair">Sair</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== LOGIN ===================== -->
+  <section class="login" id="tela-login" data-testid="tela-login" aria-labelledby="titulo-login">
+    <h1 id="titulo-login">Entrar</h1>
+    <p class="sub">Acesse para montar um pedido de venda.</p>
+    <div class="alerta alerta-erro" id="login-erro" data-testid="login-erro" role="alert" hidden></div>
+    <form id="form-login" novalidate>
+      <div class="campo">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" name="email" data-testid="login-email" autocomplete="username">
+      </div>
+      <div class="campo">
+        <label for="login-senha">Senha</label>
+        <input type="password" id="login-senha" name="senha" data-testid="login-senha" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primario" id="btn-entrar" data-testid="btn-entrar" style="width:100%">Entrar</button>
+    </form>
+    <p class="dica">Credenciais de teste: <code>candidato@teste.com</code> / <code>Senha@123</code></p>
+  </section>
+
+  <!-- ===================== APLICAÇÃO ===================== -->
+  <section id="tela-app" data-testid="tela-app" hidden>
+    <h1>Novo pedido de venda</h1>
+    <p class="sub">Escolha os produtos, aplique um cupom se tiver e finalize o pedido.</p>
+
+    <div class="grade">
+      <div>
+        <h2>Catálogo</h2>
+        <div class="filtros">
+          <div>
+            <label for="busca">Buscar por nome</label>
+            <input type="search" id="busca" data-testid="filtro-busca" placeholder="Ex.: teclado">
+          </div>
+          <div>
+            <label for="categoria">Categoria</label>
+            <select id="categoria" data-testid="filtro-categoria">
+              <option value="">Todas</option>
+              <option>Periféricos</option>
+              <option>Monitores</option>
+              <option>Áudio</option>
+              <option>Acessórios</option>
+            </select>
+          </div>
+          <div>
+            <label for="ordenacao">Ordenar por</label>
+            <select id="ordenacao" data-testid="filtro-ordenacao">
+              <option value="padrao">Padrão</option>
+              <option value="preco-asc">Menor preço</option>
+              <option value="preco-desc">Maior preço</option>
+              <option value="nome">Nome (A–Z)</option>
+            </select>
+          </div>
+        </div>
+        <div class="resumo-lista" id="resumo-lista" data-testid="catalogo-total"></div>
+        <div class="carregando" id="catalogo-carregando" data-testid="catalogo-carregando" hidden>
+          <div class="spinner" aria-hidden="true"></div>Carregando produtos…
+        </div>
+        <div class="vazio" id="catalogo-vazio" data-testid="catalogo-vazio" hidden></div>
+        <ul class="produtos" id="lista-produtos" data-testid="lista-produtos"></ul>
+      </div>
+
+      <aside class="pedido" data-testid="painel-pedido" aria-labelledby="titulo-pedido">
+        <h2 id="titulo-pedido">Seu pedido</h2>
+        <p class="sub" id="pedido-vazio" data-testid="pedido-vazio" style="margin:0 0 12px">Nenhum item adicionado.</p>
+        <ul class="itens" id="lista-itens" data-testid="lista-itens"></ul>
+
+        <table class="totais" aria-label="Totais do pedido">
+          <tr><td>Subtotal</td><td data-testid="valor-subtotal" id="valor-subtotal">R$ 0,00</td></tr>
+          <tr><td>Desconto</td><td data-testid="valor-desconto" id="valor-desconto">R$ 0,00</td></tr>
+          <tr><td>Frete</td><td data-testid="valor-frete" id="valor-frete">R$ 0,00</td></tr>
+          <tr class="total"><td>Total</td><td data-testid="valor-total" id="valor-total">R$ 0,00</td></tr>
+        </table>
+
+        <label for="cupom">Cupom de desconto</label>
+        <div class="cupom" id="bloco-cupom">
+          <input type="text" id="cupom" data-testid="cupom-input" placeholder="Digite o código">
+          <button class="btn" id="btn-cupom" data-testid="btn-aplicar-cupom">Aplicar</button>
+        </div>
+        <div class="cupom-aplicado" id="cupom-aplicado" data-testid="cupom-aplicado" hidden>
+          <span>Cupom <b id="cupom-codigo"></b> aplicado</span>
+          <button class="link" id="btn-remover-cupom" data-testid="btn-remover-cupom">Remover</button>
+        </div>
+        <div class="erro-campo" id="cupom-erro" data-testid="cupom-erro" role="alert" hidden></div>
+
+        <button class="btn btn-primario" id="btn-finalizar" data-testid="btn-finalizar" style="width:100%;margin-top:16px" disabled>Finalizar pedido</button>
+      </aside>
+    </div>
+
+    <details class="regras" data-testid="regras-negocio">
+      <summary>Regras de negócio deste sistema</summary>
+      <ol>
+        <li><b>RN01</b> – Login válido: <code>candidato@teste.com</code> com a senha <code>Senha@123</code>.</li>
+        <li><b>RN02</b> – E-mail e senha são obrigatórios e o e-mail deve ter formato válido.</li>
+        <li><b>RN03</b> – Após 3 tentativas de login inválidas seguidas, o acesso é bloqueado até recarregar a página.</li>
+        <li><b>RN04</b> – O usuário <code>bloqueado@teste.com</code> recebe a mensagem “Usuário bloqueado”, independentemente da senha.</li>
+        <li><b>RN05</b> – A busca por nome não diferencia maiúsculas de minúsculas.</li>
+        <li><b>RN06</b> – Produtos sem estoque não podem ser adicionados ao pedido.</li>
+        <li><b>RN07</b> – A quantidade de cada item vai de 1 a 10. Diminuir um item com quantidade 1 remove o item do pedido.</li>
+        <li><b>RN08</b> – O frete é de R$ 25,00. Pedidos com subtotal a partir de R$ 200,00 têm frete grátis. O frete é calculado sobre o subtotal antes do desconto.</li>
+        <li><b>RN09</b> – O cupom <code>QA10</code> dá 10% de desconto sobre o subtotal. Só é permitido um cupom por pedido; códigos inválidos exibem erro.</li>
+        <li><b>RN10</b> – Na finalização são obrigatórios: nome com pelo menos 3 caracteres, e-mail válido, CEP com 8 dígitos, forma de pagamento e aceite dos termos.</li>
+        <li><b>RN11</b> – Um pedido confirmado exibe um número no formato <code>PED-000000</code> e esvazia o pedido atual.</li>
+        <li><b>RN12</b> – Ao sair, o sistema volta para a tela de login e descarta o pedido em andamento.</li>
+      </ol>
+    </details>
+  </section>
+</main>
+
+<!-- ===================== MODAL DE FINALIZAÇÃO ===================== -->
+<div class="fundo-modal" id="modal-checkout" data-testid="modal-checkout" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-checkout">
+    <div class="modal-cab">
+      <h2 id="titulo-checkout">Finalizar pedido</h2>
+      <button class="btn btn-icone" id="btn-fechar-modal" data-testid="btn-fechar-modal" aria-label="Fechar">✕</button>
+    </div>
+
+    <form id="form-checkout" data-testid="form-checkout" novalidate>
+      <div class="campo">
+        <label for="ck-nome">Nome completo</label>
+        <input type="text" id="ck-nome" data-testid="checkout-nome" autocomplete="name">
+        <div class="erro-campo" id="erro-nome" data-testid="erro-nome" hidden></div>
+      </div>
+      <div class="campo">
+        <label for="ck-email">E-mail</label>
+        <input type="email" id="ck-email" data-testid="checkout-email" autocomplete="email">
+        <div class="erro-campo" id="erro-email" data-testid="erro-email" hidden></div>
+      </div>
+      <div class="campo">
+        <label for="ck-cep">CEP</label>
+        <input type="text" id="ck-cep" data-testid="checkout-cep" inputmode="numeric" placeholder="00000-000" maxlength="9">
+        <div class="erro-campo" id="erro-cep" data-testid="erro-cep" hidden></div>
+      </div>
+      <fieldset>
+        <legend>Forma de pagamento</legend>
+        <div class="opcoes">
+          <label><input type="radio" name="pagamento" value="pix" data-testid="pagamento-pix"> Pix</label>
+          <label><input type="radio" name="pagamento" value="boleto" data-testid="pagamento-boleto"> Boleto</label>
+          <label><input type="radio" name="pagamento" value="cartao" data-testid="pagamento-cartao"> Cartão</label>
+        </div>
+        <div class="erro-campo" id="erro-pagamento" data-testid="erro-pagamento" hidden></div>
+      </fieldset>
+      <div class="campo aceite">
+        <label><input type="checkbox" id="ck-termos" data-testid="checkout-termos"> Li e aceito os termos de venda</label>
+        <div class="erro-campo" id="erro-termos" data-testid="erro-termos" hidden></div>
+      </div>
+      <div class="acoes">
+        <button type="button" class="btn" id="btn-cancelar" data-testid="btn-cancelar">Cancelar</button>
+        <button type="submit" class="btn btn-primario" id="btn-confirmar" data-testid="btn-confirmar">Confirmar pedido</button>
+      </div>
+    </form>
+
+    <div class="sucesso" id="pedido-sucesso" data-testid="pedido-sucesso" hidden>
+      <div class="alerta alerta-ok">Pedido confirmado com sucesso.</div>
+      <div>Número do pedido</div>
+      <div class="numero" id="pedido-numero" data-testid="pedido-numero"></div>
+      <button class="btn btn-primario" id="btn-novo-pedido" data-testid="btn-novo-pedido">Fazer novo pedido</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" data-testid="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Dados "da API" ---------- */
+  var USUARIO = { email: 'candidato@teste.com', senha: 'Senha@123', nome: 'Candidato QA' };
+  var PRODUTOS = [
+    { id: 1, nome: 'Teclado mecânico', categoria: 'Periféricos', preco: 120.00, estoque: 15 },
+    { id: 2, nome: 'Mouse sem fio',    categoria: 'Periféricos', preco: 80.00,  estoque: 30 },
+    { id: 3, nome: 'Monitor 24"',      categoria: 'Monitores',   preco: 899.90, estoque: 0  },
+    { id: 4, nome: 'Headset USB',      categoria: 'Áudio',       preco: 159.90, estoque: 8  },
+    { id: 5, nome: 'Webcam Full HD',   categoria: 'Periféricos', preco: 219.00, estoque: 5  },
+    { id: 6, nome: 'Caixa de som',     categoria: 'Áudio',       preco: 99.50,  estoque: 12 },
+    { id: 7, nome: 'Hub USB-C',        categoria: 'Acessórios',  preco: 74.90,  estoque: 20 },
+    { id: 8, nome: 'Suporte para notebook', categoria: 'Acessórios', preco: 45.00, estoque: 40 }
+  ];
+  var MAX_TENTATIVAS = 3, MAX_QTD = 10, FRETE = 25, LIMITE_FRETE = 200;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  var estado = { tentativas: 0, bloqueado: false, produtos: [], itens: [], cupom: null };
+
+  function $(id) { return document.getElementById(id); }
+  function brl(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function arred(v) { return Math.round(v * 100) / 100; }
+
+  function toast(msg, tipo) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (tipo || 'ok');
+    el.setAttribute('data-testid', 'toast');
+    el.textContent = msg;
+    $('toasts').appendChild(el);
+    setTimeout(function () { el.remove(); }, 3000);
+  }
+
+  /* ---------- Login ---------- */
+  function erroLogin(msg) { var e = $('login-erro'); e.textContent = msg; e.hidden = false; }
+
+  $('form-login').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (estado.bloqueado) return;
+    var email = $('login-email').value.trim();
+    var senha = $('login-senha').value;
+    $('login-erro').hidden = true;
+
+    if (!email || !senha) { erroLogin('Informe e-mail e senha.'); return; }
+    if (!EMAIL_RE.test(email)) { erroLogin('Informe um e-mail válido.'); return; }
+    if (email.toLowerCase() === 'bloqueado@teste.com') { erroLogin('Usuário bloqueado. Procure o administrador do sistema.'); return; }
+
+    if (email.toLowerCase() === USUARIO.email && senha === USUARIO.senha) {
+      estado.tentativas = 0;
+      entrar();
+      return;
+    }
+    estado.tentativas++;
+    if (estado.tentativas >= MAX_TENTATIVAS) {
+      estado.bloqueado = true;
+      $('btn-entrar').disabled = true;
+      erroLogin('Acesso bloqueado após 3 tentativas inválidas. Recarregue a página para tentar novamente.');
+    } else {
+      erroLogin('E-mail ou senha incorretos. Tentativas restantes: ' + (MAX_TENTATIVAS - estado.tentativas) + '.');
+    }
+  });
+
+  function entrar() {
+    $('tela-login').hidden = true;
+    $('tela-app').hidden = false;
+    $('area-usuario').hidden = false;
+    $('usuario-nome').textContent = USUARIO.nome;
+    carregarProdutos();
+    renderPedido();
+  }
+
+  $('btn-sair').addEventListener('click', function () {
+    estado.itens = []; estado.cupom = null; estado.produtos = [];
+    $('form-login').reset();
+    $('login-erro').hidden = true;
+    $('busca').value = ''; $('categoria').value = ''; $('ordenacao').value = 'padrao';
+    $('tela-app').hidden = true;
+    $('area-usuario').hidden = true;
+    $('tela-login').hidden = false;
+    $('login-email').focus();
+  });
+
+  /* ---------- Catálogo (carregamento assíncrono simulado) ---------- */
+  function carregarProdutos() {
+    $('lista-produtos').innerHTML = '';
+    $('resumo-lista').textContent = '';
+    $('catalogo-vazio').hidden = true;
+    $('catalogo-carregando').hidden = false;
+    setTimeout(function () {
+      estado.produtos = PRODUTOS.map(function (p) { return Object.assign({}, p); });
+      $('catalogo-carregando').hidden = true;
+      renderCatalogo();
+    }, 1500);
+  }
+
+  function renderCatalogo() {
+    if (!estado.produtos.length) return;
+    var termo = $('busca').value.trim();
+    var cat = $('categoria').value;
+    var ord = $('ordenacao').value;
+
+    var lista = estado.produtos.filter(function (p) {
+      return (!termo || p.nome.indexOf(termo) !== -1) && (!cat || p.categoria === cat);
+    });
+    if (ord === 'preco-asc') lista.sort(function (a, b) { return a.preco - b.preco; });
+    if (ord === 'preco-desc') lista.sort(function (a, b) { return b.preco - a.preco; });
+    if (ord === 'nome') lista.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+
+    var ul = $('lista-produtos');
+    ul.innerHTML = '';
+    $('resumo-lista').textContent = lista.length + (lista.length === 1 ? ' produto encontrado' : ' produtos encontrados');
+
+    if (!lista.length) {
+      $('catalogo-vazio').textContent = 'Nenhum produto encontrado. Ajuste a busca ou a categoria.';
+      $('catalogo-vazio').hidden = false;
+      return;
+    }
+    $('catalogo-vazio').hidden = true;
+
+    lista.forEach(function (p) {
+      var li = document.createElement('li');
+      li.className = 'produto';
+      li.setAttribute('data-testid', 'produto-card');
+      li.setAttribute('data-id', p.id);
+      var semEstoque = p.estoque === 0;
+      li.innerHTML =
+        '<span class="cat" data-testid="produto-categoria"></span>' +
+        '<span class="nome" data-testid="produto-nome"></span>' +
+        '<span class="preco" data-testid="produto-preco"></span>' +
+        '<span class="estoque' + (semEstoque ? ' zerado' : '') + '" data-testid="produto-estoque"></span>' +
+        '<button class="btn' + (semEstoque ? '' : ' btn-primario') + '" data-testid="btn-adicionar"' + (semEstoque ? ' disabled' : '') + '></button>';
+      li.querySelector('.cat').textContent = p.categoria;
+      li.querySelector('.nome').textContent = p.nome;
+      li.querySelector('.preco').textContent = brl(p.preco);
+      li.querySelector('.estoque').textContent = semEstoque ? 'Sem estoque' : p.estoque + ' em estoque';
+      var btn = li.querySelector('button');
+      btn.textContent = semEstoque ? 'Indisponível' : 'Adicionar';
+      btn.setAttribute('aria-label', 'Adicionar ' + p.nome);
+      if (!semEstoque) btn.addEventListener('click', function () { adicionar(p.id); });
+      ul.appendChild(li);
+    });
+  }
+
+  ['busca', 'categoria', 'ordenacao'].forEach(function (id) {
+    $(id).addEventListener(id === 'busca' ? 'input' : 'change', renderCatalogo);
+  });
+
+  /* ---------- Pedido ---------- */
+  function adicionar(id) {
+    var p = PRODUTOS.find(function (x) { return x.id === id; });
+    var item = estado.itens.find(function (i) { return i.id === id; });
+    if (item) { if (!incrementar(id)) return; }
+    else estado.itens.push({ id: p.id, nome: p.nome, preco: p.preco, qtd: 1 });
+    toast(p.nome + ' adicionado ao pedido.');
+    renderPedido();
+  }
+
+  function incrementar(id) {
+    var item = estado.itens.find(function (i) { return i.id === id; });
+    if (item.qtd > MAX_QTD) {
+      toast('A quantidade máxima por item é ' + MAX_QTD + '.', 'erro');
+      return false;
+    }
+    item.qtd++;
+    renderPedido();
+    return true;
+  }
+
+  function decrementar(id) {
+    var item = estado.itens.find(function (i) { return i.id === id; });
+    if (item.qtd <= 1) { remover(id); return; }
+    item.qtd--;
+    renderPedido();
+  }
+
+  function remover(id) {
+    var item = estado.itens.find(function (i) { return i.id === id; });
+    estado.itens = estado.itens.filter(function (i) { return i.id !== id; });
+    if (item) toast(item.nome + ' removido do pedido.');
+    renderPedido();
+  }
+
+  function calcular() {
+    var subtotal = arred(estado.itens.reduce(function (s, i) { return s + i.preco * i.qtd; }, 0));
+    var desconto = estado.cupom ? arred(subtotal * 0.10) : 0;
+    var frete = subtotal === 0 ? 0 : (subtotal > LIMITE_FRETE ? 0 : FRETE);
+    return { subtotal: subtotal, desconto: desconto, frete: frete, total: arred(subtotal - desconto + frete) };
+  }
+
+  function renderPedido() {
+    var ul = $('lista-itens');
+    ul.innerHTML = '';
+    estado.itens.forEach(function (i) {
+      var li = document.createElement('li');
+      li.className = 'item';
+      li.setAttribute('data-testid', 'item-pedido');
+      li.setAttribute('data-id', i.id);
+      li.innerHTML =
+        '<span data-testid="item-nome"></span>' +
+        '<span class="linha-total" data-testid="item-total"></span>' +
+        '<span class="qtd">' +
+          '<button class="btn btn-icone" data-testid="btn-diminuir" aria-label="Diminuir quantidade">−</button>' +
+          '<span data-testid="item-quantidade"></span>' +
+          '<button class="btn btn-icone" data-testid="btn-aumentar" aria-label="Aumentar quantidade">+</button>' +
+        '</span>' +
+        '<span style="text-align:right"><button class="link" data-testid="btn-remover">Remover</button></span>';
+      li.querySelector('[data-testid=item-nome]').textContent = i.nome + ' · ' + brl(i.preco);
+      li.querySelector('[data-testid=item-total]').textContent = brl(i.preco * i.qtd);
+      li.querySelector('[data-testid=item-quantidade]').textContent = i.qtd;
+      li.querySelector('[data-testid=btn-diminuir]').addEventListener('click', function () { decrementar(i.id); });
+      li.querySelector('[data-testid=btn-aumentar]').addEventListener('click', function () { incrementar(i.id); });
+      li.querySelector('[data-testid=btn-remover]').addEventListener('click', function () { remover(i.id); });
+      ul.appendChild(li);
+    });
+
+    var vazio = estado.itens.length === 0;
+    $('pedido-vazio').hidden = !vazio;
+    $('btn-finalizar').disabled = vazio;
+    if (vazio && estado.cupom) { estado.cupom = null; }
+
+    var t = calcular();
+    $('valor-subtotal').textContent = brl(t.subtotal);
+    $('valor-desconto').textContent = t.desconto ? '− ' + brl(t.desconto) : brl(0);
+    $('valor-frete').textContent = (t.frete === 0 && !vazio) ? 'Grátis' : brl(t.frete);
+    $('valor-total').textContent = brl(t.total);
+    $('carrinho-contador').textContent = estado.itens.reduce(function (s, i) { return s + i.qtd; }, 0);
+
+    $('bloco-cupom').hidden = !!estado.cupom;
+    $('cupom-aplicado').hidden = !estado.cupom;
+    $('cupom-codigo').textContent = estado.cupom || '';
+  }
+
+  /* ---------- Cupom ---------- */
+  function erroCupom(msg) { var e = $('cupom-erro'); e.textContent = msg; e.hidden = !msg; }
+
+  $('btn-cupom').addEventListener('click', function () {
+    var codigo = $('cupom').value.trim().toUpperCase();
+    erroCupom('');
+    if (!estado.itens.length) { erroCupom('Adicione itens ao pedido antes de aplicar um cupom.'); return; }
+    if (!codigo) { erroCupom('Informe o código do cupom.'); return; }
+    if (estado.cupom) { erroCupom('Já existe um cupom aplicado neste pedido.'); return; }
+    if (codigo !== 'QA10') { erroCupom('Cupom inválido ou expirado.'); return; }
+    estado.cupom = codigo;
+    $('cupom').value = '';
+    toast('Cupom ' + codigo + ' aplicado.');
+    renderPedido();
+  });
+
+  $('btn-remover-cupom').addEventListener('click', function () {
+    estado.cupom = null;
+    toast('Cupom removido.');
+    renderPedido();
+  });
+
+  /* ---------- Finalização ---------- */
+  function abrirModal() {
+    $('form-checkout').reset();
+    ['nome', 'email', 'cep', 'pagamento', 'termos'].forEach(function (c) { erroCampo(c, ''); });
+    $('form-checkout').hidden = false;
+    $('pedido-sucesso').hidden = true;
+    $('btn-confirmar').disabled = false;
+    $('btn-confirmar').textContent = 'Confirmar pedido';
+    $('modal-checkout').hidden = false;
+    $('ck-nome').focus();
+  }
+  function fecharModal() { $('modal-checkout').hidden = true; $('btn-finalizar').focus(); }
+
+  $('btn-finalizar').addEventListener('click', abrirModal);
+  $('btn-fechar-modal').addEventListener('click', fecharModal);
+  $('btn-cancelar').addEventListener('click', fecharModal);
+  $('btn-novo-pedido').addEventListener('click', fecharModal);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('modal-checkout').hidden) fecharModal();
+  });
+
+  $('ck-cep').addEventListener('input', function () {
+    var d = this.value.replace(/\D/g, '').slice(0, 8);
+    this.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+  });
+
+  function erroCampo(campo, msg) {
+    var el = $('erro-' + campo);
+    el.textContent = msg; el.hidden = !msg;
+    var input = { nome: 'ck-nome', email: 'ck-email', cep: 'ck-cep' }[campo];
+    if (input) $(input).setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+
+  $('form-checkout').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var nome = $('ck-nome').value.trim();
+    var email = $('ck-email').value.trim();
+    var cep = $('ck-cep').value.replace(/\D/g, '');
+    var pag = document.querySelector('input[name=pagamento]:checked');
+    var ok = true;
+
+    if (nome.length < 3) { erroCampo('nome', 'Informe o nome completo (mínimo de 3 caracteres).'); ok = false; } else erroCampo('nome', '');
+    if (!EMAIL_RE.test(email)) { erroCampo('email', 'Informe um e-mail válido.'); ok = false; } else erroCampo('email', '');
+    if (cep.length < 7) { erroCampo('cep', 'Informe um CEP válido com 8 dígitos.'); ok = false; } else erroCampo('cep', '');
+    if (!pag) { erroCampo('pagamento', 'Escolha uma forma de pagamento.'); ok = false; } else erroCampo('pagamento', '');
+    if (!$('ck-termos').checked) { erroCampo('termos', 'É preciso aceitar os termos de venda.'); ok = false; } else erroCampo('termos', '');
+    if (!ok) return;
+
+    var btn = $('btn-confirmar');
+    btn.disabled = true;
+    btn.textContent = 'Processando…';
+    setTimeout(function () {
+      var numero = 'PED-' + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      $('pedido-numero').textContent = numero;
+      $('form-checkout').hidden = true;
+      $('pedido-sucesso').hidden = false;
+      estado.itens = []; estado.cupom = null;
+      renderPedido();
+      toast('Pedido ' + numero + ' confirmado.');
+    }, 1000);
+  });
+})();
+</script>
+</body>
+</html>
