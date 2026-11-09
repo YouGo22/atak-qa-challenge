@@ -1,5 +1,13 @@
 # Prompts utilizados na assistência de IA
 
+## Ferramentas de IA utilizadas
+
+O projeto contou com apoio do ChatGPT para análise dos requisitos, planejamento dos cenários, elaboração de prompts e revisão dos resultados.
+
+O Codex foi utilizado para auxiliar na implementação dos testes automatizados, organização do projeto, investigação de falhas e documentação.
+
+Os prompts enviados ao Codex durante o desenvolvimento estão registrados neste documento. As decisões e os resultados foram acompanhados e validados por meio da execução dos testes no ambiente local.
+
 Transcrição integral, em ordem cronológica, das mensagens de solicitação fornecidas pelo usuário nesta conversa. Os blocos preservam o texto e a formatação recebidos. O contexto técnico de ambiente enviado pela interface não é um prompt de solicitação. Nenhum prompt adicional foi enviado a agentes auxiliares.
 
 ## Prompt 1 — inspeção e planejamento
